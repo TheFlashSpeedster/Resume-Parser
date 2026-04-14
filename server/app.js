@@ -15,6 +15,19 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const app = express();
 const port = Number(process.env.PORT || 5000);
 
+let initializationPromise;
+
+function initializeApp() {
+  if (!initializationPromise) {
+    initializationPromise = (async () => {
+      await connectDB();
+      await ensureDefaultAdmin();
+    })();
+  }
+
+  return initializationPromise;
+}
+
 const uploadsDir = path.join(__dirname, 'uploads');
 const exportsDir = path.join(__dirname, 'exports');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -37,12 +50,25 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 2
     }
   })
 );
+
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await initializeApp();
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+});
 
 app.use('/api/resumes', publicRoutes);
 app.use('/api/admin', adminRoutes);
@@ -92,12 +118,15 @@ function startServerWithFallback(startPort, maxRetries = 10) {
 }
 
 async function bootstrap() {
-  await connectDB();
-  await ensureDefaultAdmin();
+  await initializeApp();
   await startServerWithFallback(port);
 }
 
-bootstrap().catch((err) => {
-  console.error('Failed to start server:', err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = app;

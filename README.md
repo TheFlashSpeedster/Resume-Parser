@@ -233,3 +233,43 @@ A sample output is provided at:
 5. Background job queue for large-volume parsing
 6. Audit trail UI with diff view for manual edits
 7. Role-based auth with multiple admin users
+
+## Deploy on Vercel
+
+This project is configured to run on Vercel as a Node.js serverless function.
+
+### 1) Push your code to GitHub
+
+Commit and push the latest code (including `vercel.json` and `api/index.js`).
+
+### 2) Create Vercel project
+
+- Go to Vercel dashboard and import your GitHub repository.
+- Framework preset: **Other**.
+- Root directory: repository root.
+
+### 3) Configure environment variables
+
+Set these in Vercel Project Settings -> Environment Variables:
+
+- `MONGO_URI` (MongoDB Atlas connection string)
+- `SESSION_SECRET` (strong random secret)
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `MAX_FILE_SIZE_MB` (optional, e.g. `5`)
+- `NODE_ENV=production`
+
+### 4) Deploy
+
+Trigger deploy from dashboard or run:
+
+```bash
+vercel
+vercel --prod
+```
+
+### 5) Important serverless notes
+
+- On Vercel, uploaded files are written to temporary storage (`/tmp`) during request processing.
+- Do not rely on disk persistence across requests/deployments.
+- MongoDB Atlas is recommended for production database hosting.
